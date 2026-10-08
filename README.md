@@ -4,12 +4,7 @@ An icon-led, two-row footer for [Pi](https://pi.dev). Working location on the le
 
 **Release status:** implementation complete; npm publication pending publisher authentication and final package-name confirmation. `pi-terminal-statusline` is the provisional name. The npm install command below will work only after publication.
 
-```text
- ~/projects/nixdots                                         gpt-5.4 ·  high
- main · ctx 38%                 2h 10m ██░░░░░░░░ 24% · 2d 3h █████░░░░░ 51%
-```
-
-Illustrative values, not live account usage. Directory on row one with the Git branch and context directly below it; other extensions' status text follows on the same row. Provider logo, model and effort align right on row one; the usage bars align right on row two. Each usage meter starts with the time remaining until that window resets (five-hour first, then weekly) instead of a `5h`/`week` label; when a provider omits the reset time, the label is shown instead. Effort uses the same color as Pi's input-field border for the current thinking level.
+<img width="3238" height="189" alt="imagen" src="https://github.com/user-attachments/assets/786c847d-9e7b-46a2-b5aa-142068340be8" />
 
 ## Install
 
