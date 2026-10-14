@@ -1,0 +1,5 @@
+# Dependencies only needed for development; none of them must run install scripts.
+allowBuilds:
+  '@google/genai': false
+  esbuild: false
+  protobufjs: false

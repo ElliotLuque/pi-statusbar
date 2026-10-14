@@ -5,9 +5,9 @@ import { setTimeout as wait } from "node:timers/promises";
 
 const publishing = process.argv.includes("--publish");
 const registry = "https://registry.npmjs.org/";
-// Windows ships npm as a batch shim, which Node only runs through a shell. All arguments are fixed.
+// Windows ships pnpm as a batch shim, which Node only runs through a shell. All arguments are fixed.
 function run(args, capture = false) {
-  return execFileSync("npm", args, { encoding: "utf8", stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit", shell: process.platform === "win32" });
+  return execFileSync("pnpm", args, { encoding: "utf8", stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit", shell: process.platform === "win32" });
 }
 
 const manifest = JSON.parse(await readFile("package.json", "utf8"));
@@ -22,23 +22,23 @@ if (publishing) {
   try {
     console.log(`Publishing as ${run(["whoami", "--registry", registry], true).trim()}`);
   } catch {
-    console.error("Publication blocked: authenticate with npm login, confirm package name/ownership, then rerun npm run release -- --publish. Never put tokens in source.");
+    console.error(`Publication blocked: authenticate with pnpm login, confirm package name/ownership, then rerun pnpm release --publish. Never put tokens in source.`);
     process.exit(1);
   }
 }
 
 run(["run", "check"]);
 run(["test"]);
-const [pack] = JSON.parse(run(["pack", "--dry-run", "--json", "--ignore-scripts"], true));
+const pack = JSON.parse(run(["pack", "--dry-run", "--json"], true));
 const files = pack.files.map(file => file.path);
 const modules = ["index", "render", "quota", "codex", "poller", "preferences", "usage", "types"].map(name => `extensions/statusline/${name}.ts`);
 for (const file of ["package.json", "README.md", "LICENSE", "CHANGELOG.md", ...modules]) {
   assert.ok(files.includes(file), `Missing package file: ${file}`);
 }
 assert.ok(files.every(file => ["package.json", "README.md", "LICENSE", "CHANGELOG.md"].includes(file) || /^extensions\/statusline\/[^/]+\.ts$/.test(file)), "Unexpected files in release tarball");
-console.log(`Verified ${pack.name}@${pack.version}: ${files.length} files, ${pack.size} packed bytes.`);
+console.log(`Verified ${pack.name}@${pack.version}: ${files.length} files.`);
 if (!publishing) {
-  console.log("Dry run only; NOT published. After npm login and confirming ownership, run npm run release -- --publish.");
+  console.log("Dry run only; NOT published. After pnpm login and confirming ownership, run pnpm release --publish.");
   process.exit(0);
 }
 
@@ -52,7 +52,7 @@ for (let attempt = 0; attempt < 6; attempt++) {
     if (attempt < 5) await wait(5000);
   }
 }
-assert.ok(published, "npm publish ran, but registry verification failed. Check npm before retrying; a version cannot be republished.");
+assert.ok(published, "pnpm publish ran, but registry verification failed. Check npmjs.com before retrying; a version cannot be republished.");
 assert.equal(published.version, manifest.version);
 assert.ok(published.keywords?.includes("pi-package"));
 assert.equal(published.pi?.extensions?.[0], "./extensions/statusline/index.ts");
