@@ -4,6 +4,12 @@ import { readFile } from "node:fs/promises";
 import { setTimeout as wait } from "node:timers/promises";
 
 const publishing = process.argv.includes("--publish");
+// npm requires 2FA to publish: pass the current authenticator code with --otp=123456.
+const otp = process.argv.find(arg => arg.startsWith("--otp="))?.slice("--otp=".length);
+if (otp !== undefined && !/^\d{6,8}$/.test(otp)) {
+  console.error("--otp must be the 6-8 digit code from your authenticator app.");
+  process.exit(1);
+}
 const registry = "https://registry.npmjs.org/";
 // Windows ships pnpm as a batch shim, which Node only runs through a shell. All arguments are fixed.
 function run(args, capture = false) {
@@ -22,7 +28,7 @@ if (publishing) {
   try {
     console.log(`Publishing as ${run(["whoami", "--registry", registry], true).trim()}`);
   } catch {
-    console.error(`Publication blocked: authenticate with pnpm login, confirm package name/ownership, then rerun pnpm release --publish. Never put tokens in source.`);
+    console.error(`Publication blocked: authenticate with pnpm login, confirm package name/ownership, then rerun pnpm release --publish --otp=<code>. Never put tokens in source.`);
     process.exit(1);
   }
 }
@@ -38,11 +44,11 @@ for (const file of ["package.json", "README.md", "LICENSE", "CHANGELOG.md", ...m
 assert.ok(files.every(file => ["package.json", "README.md", "LICENSE", "CHANGELOG.md"].includes(file) || /^extensions\/statusline\/[^/]+\.ts$/.test(file)), "Unexpected files in release tarball");
 console.log(`Verified ${pack.name}@${pack.version}: ${files.length} files.`);
 if (!publishing) {
-  console.log("Dry run only; NOT published. After pnpm login and confirming ownership, run pnpm release --publish.");
+  console.log("Dry run only; NOT published. After pnpm login and confirming ownership, run pnpm release --publish --otp=<code>.");
   process.exit(0);
 }
 
-run(["publish", "--access", "public", "--registry", registry]);
+run(["publish", "--access", "public", "--registry", registry, ...(otp ? [`--otp=${otp}`] : [])]);
 let published;
 for (let attempt = 0; attempt < 6; attempt++) {
   try {
