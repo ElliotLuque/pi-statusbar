@@ -1,0 +1,25 @@
+name: Release
+
+# Publishes to npm when a version tag (v1.2.3) is pushed, using npm trusted publishing (OIDC):
+# no npm token is stored in this repository. Configure the trusted publisher on npmjs.com with
+# workflow filename "release.yml".
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+  id-token: write # Required for trusted publishing and provenance.
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22' # Trusted publishing needs Node 22.14+.
+          # No dependency cache in release builds.
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm release --publish

@@ -3,11 +3,14 @@ import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { setTimeout as wait } from "node:timers/promises";
 
+// Modes (npm requires 2FA or trusted publishing for every publish):
+//   (none)     verify only
+//   --stage    from your machine: upload to npm's staging area, then approve it with 2FA
+//   --publish  from GitHub Actions only: publish directly via trusted publishing (OIDC)
+const staging = process.argv.includes("--stage");
 const publishing = process.argv.includes("--publish");
-// npm requires 2FA to publish: pass the current authenticator code with --otp=123456.
-const otp = process.argv.find(arg => arg.startsWith("--otp="))?.slice("--otp=".length);
-if (otp !== undefined && !/^\d{6,8}$/.test(otp)) {
-  console.error("--otp must be the 6-8 digit code from your authenticator app.");
+if (staging && publishing) {
+  console.error("Use either --stage or --publish, not both.");
   process.exit(1);
 }
 const registry = "https://registry.npmjs.org/";
@@ -25,10 +28,17 @@ for (const name of ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"]
   assert.ok(!manifest.dependencies?.[name], `Do not bundle ${name}`);
 }
 if (publishing) {
+  if (process.env.GITHUB_ACTIONS !== "true") {
+    console.error("--publish runs in the GitHub release workflow (trusted publishing). From your machine, use pnpm release --stage.");
+    process.exit(1);
+  }
+  const tag = process.env.GITHUB_REF_NAME;
+  assert.equal(tag, `v${manifest.version}`, `Tag ${tag} does not match package.json version ${manifest.version}`);
+} else if (staging) {
   try {
-    console.log(`Publishing as ${run(["whoami", "--registry", registry], true).trim()}`);
+    console.log(`Staging as ${run(["whoami", "--registry", registry], true).trim()}`);
   } catch {
-    console.error(`Publication blocked: authenticate with pnpm login, confirm package name/ownership, then rerun pnpm release --publish --otp=<code>. Never put tokens in source.`);
+    console.error("Staging blocked: run pnpm login, then rerun pnpm release --stage. Never put tokens in source.");
     process.exit(1);
   }
 }
@@ -43,12 +53,20 @@ for (const file of ["package.json", "README.md", "LICENSE", "CHANGELOG.md", ...m
 }
 assert.ok(files.every(file => ["package.json", "README.md", "LICENSE", "CHANGELOG.md"].includes(file) || /^extensions\/statusline\/[^/]+\.ts$/.test(file)), "Unexpected files in release tarball");
 console.log(`Verified ${pack.name}@${pack.version}: ${files.length} files.`);
-if (!publishing) {
-  console.log("Dry run only; NOT published. After pnpm login and confirming ownership, run pnpm release --publish --otp=<code>.");
+if (!publishing && !staging) {
+  console.log("Verified only; NOT published. Release by pushing a v* tag, or locally with pnpm release --stage.");
+  process.exit(0);
+}
+if (staging) {
+  run(["stage", "publish", "--access", "public", "--registry", registry]);
+  console.log(`Staged ${manifest.name}@${manifest.version}; it is NOT live yet.`);
+  console.log("Approve it with 2FA: pnpm stage approve (or the Staged Packages tab on npmjs.com).");
   process.exit(0);
 }
 
-run(["publish", "--access", "public", "--registry", registry, ...(otp ? [`--otp=${otp}`] : [])]);
+// Uses the GitHub Actions OIDC token; no npm token is stored anywhere.
+// Tag checkouts are a detached HEAD, so skip pnpm's branch check; the tag/version check above replaces it.
+run(["publish", "--access", "public", "--registry", registry, "--provenance", "--no-git-checks"]);
 let published;
 for (let attempt = 0; attempt < 6; attempt++) {
   try {
