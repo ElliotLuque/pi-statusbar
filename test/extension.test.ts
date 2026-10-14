@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -16,7 +16,7 @@ async function harness(mode: "tui" | "rpc" | "json" | "print" = "tui") {
   const previous = process.env.PI_CODING_AGENT_DIR;
   process.env.PI_CODING_AGENT_DIR = directory;
   const handlers = new Map<string, Handler>();
-  let command!: (args: string, ctx: ExtensionContext) => Promise<void>;
+  const commands = new Map<string, (args: string, ctx: ExtensionContext) => Promise<void>>();
   let component: Component | undefined;
   let subscriptions = 0;
   let renders = 0;
@@ -24,7 +24,7 @@ async function harness(mode: "tui" | "rpc" | "json" | "print" = "tui") {
   const notices: string[] = [];
   const pi = {
     on: (event: string, handler: Handler) => { handlers.set(event, handler); },
-    registerCommand: (_name: string, value: { handler: typeof command }) => { command = value.handler; },
+    registerCommand: (name: string, value: { handler: (args: string, ctx: ExtensionContext) => Promise<void> }) => { commands.set(name, value.handler); },
     getThinkingLevel: () => effort,
   } as unknown as ExtensionAPI;
   const ctx = {
@@ -53,7 +53,7 @@ async function harness(mode: "tui" | "rpc" | "json" | "print" = "tui") {
     setEffort(value: string) { effort = value; },
     disposeComponent() { component?.dispose(); },
     event: (name: string) => handlers.get(name)?.({}, ctx),
-    command: (args: string) => command(args, ctx),
+    command: (args: string, name = "statusbar") => commands.get(name)!(args, ctx),
     async cleanup() {
       await handlers.get("session_shutdown")?.({}, ctx);
       component?.dispose();
@@ -73,7 +73,7 @@ for (const mode of ["rpc", "json", "print"] as const) {
       assert.equal(h.subscriptions, 0);
       await h.command("on");
       assert.equal(h.component, undefined);
-      await assert.rejects(readFile(join(h.directory, "terminal-statusline.json")));
+      await assert.rejects(readFile(join(h.directory, "statusbar.json")));
     } finally { await h.cleanup(); }
   });
 }
@@ -110,7 +110,7 @@ test("on/off and icon preferences survive reload without touching Pi settings", 
   try {
     await h.event("session_start");
     await h.command("icons unicode"); await h.command("icons nerd");
-    let preferences = JSON.parse(await readFile(join(h.directory, "terminal-statusline.json"), "utf8"));
+    let preferences = JSON.parse(await readFile(join(h.directory, "statusbar.json"), "utf8"));
     assert.deepEqual(preferences, { enabled: true, icons: "nerd" });
     await h.command("off");
     assert.equal(h.component, undefined);
@@ -120,10 +120,24 @@ test("on/off and icon preferences survive reload without touching Pi settings", 
     assert.equal(h.component, undefined);
     await h.command("on");
     assert.equal(h.subscriptions, 1);
-    preferences = JSON.parse(await readFile(join(h.directory, "terminal-statusline.json"), "utf8"));
+    preferences = JSON.parse(await readFile(join(h.directory, "statusbar.json"), "utf8"));
     assert.deepEqual(preferences, { enabled: true, icons: "nerd" });
     await assert.rejects(readFile(join(h.directory, "settings.json")));
     await h.command("icons invalid");
-    assert.match(h.notices.at(-1)!, /Use \/statusline/);
+    assert.match(h.notices.at(-1)!, /Use \/statusbar/);
+  } finally { await h.cleanup(); }
+});
+
+test("/statusline still works, and settings saved by pi-terminal-statusline carry over", async () => {
+  const h = await harness();
+  try {
+    await writeFile(join(h.directory, "terminal-statusline.json"), JSON.stringify({ enabled: false, icons: "ascii" }));
+    await h.event("session_start");
+    assert.equal(h.component, undefined); // The old "off" setting was honoured.
+    await h.command("on", "statusline");
+    const component = h.component as Component | undefined;
+    assert.ok(component);
+    assert.match(stripTerminalSequences(component.render(120)[0]), /^dir /); // The old ASCII icons setting was honoured.
+    assert.deepEqual(JSON.parse(await readFile(join(h.directory, "statusbar.json"), "utf8")), { enabled: true, icons: "ascii" });
   } finally { await h.cleanup(); }
 });

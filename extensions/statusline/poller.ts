@@ -76,7 +76,7 @@ export class QuotaPoller {
         this.state = {
           ...this.state,
           status: "error",
-          reason: known?.message ?? "Quota request failed or timed out; /statusline refresh to retry",
+          reason: known?.message ?? "Quota request failed or timed out; /statusbar refresh to retry",
         };
         const cooldown = known?.retryAfterMs ?? 0;
         delay = Math.max(known?.pollMs ?? this.options.intervalMs, cooldown);

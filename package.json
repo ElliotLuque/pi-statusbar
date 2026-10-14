@@ -1,5 +1,5 @@
 {
-  "name": "pi-terminal-statusline",
+  "name": "pi-statusbar",
   "version": "0.1.1",
   "description": "Two-row Pi footer with terminal colors, model and effort icons, context, and five-hour/weekly subscription usage bars.",
   "type": "module",
@@ -7,14 +7,14 @@
   "keywords": ["pi-package", "pi-extension", "statusline", "terminal", "codex", "claude"],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ElliotLuque/pi-terminal-statusline.git"
+    "url": "git+https://github.com/ElliotLuque/pi-statusbar.git"
   },
-  "homepage": "https://github.com/ElliotLuque/pi-terminal-statusline",
-  "bugs": {"url": "https://github.com/ElliotLuque/pi-terminal-statusline/issues"},
+  "homepage": "https://github.com/ElliotLuque/pi-statusbar",
+  "bugs": {"url": "https://github.com/ElliotLuque/pi-statusbar/issues"},
   "files": ["extensions", "README.md", "LICENSE", "CHANGELOG.md"],
   "pi": {
     "extensions": ["./extensions/statusline/index.ts"],
-    "image": "https://raw.githubusercontent.com/ElliotLuque/pi-terminal-statusline/main/assets/statusline.png"
+    "image": "https://raw.githubusercontent.com/ElliotLuque/pi-statusbar/main/assets/statusline.png"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*",

@@ -1,4 +1,4 @@
-# Pi Terminal Statusline
+# Pi Statusbar
 
 A cleaner, more useful footer for [Pi](https://pi.dev). See where you're working, which model you're using, and how much of your subscription you have left, at a glance.
 
@@ -18,7 +18,7 @@ A cleaner, more useful footer for [Pi](https://pi.dev). See where you're working
 Requires Pi 1.0.0 or later.
 
 ```sh
-pi install git:github.com/ElliotLuque/pi-terminal-statusline
+pi install npm:pi-statusbar
 ```
 
 Then run `/reload` in any open Pi session.
@@ -33,7 +33,7 @@ Then run `/reload` in any open Pi session.
 | `ctx` | Share of the model's context window in use |
 | Usage bars | Percentage **used** in your five-hour and weekly windows, with time until reset |
 
-Bars turn yellow at 75% used and red at 90%. `--` means a value isn't available yet, and `...` means it's loading. A trailing `!` means the last refresh failed. Run `/statusline` for details.
+Bars turn yellow at 75% used and red at 90%. `--` means a value isn't available yet, and `...` means it's loading. A trailing `!` means the last refresh failed. Run `/statusbar` for details.
 
 ## Subscription usage
 
@@ -43,17 +43,17 @@ Bars turn yellow at 75% used and red at 90%. `--` means a value isn't available 
 | Anthropic | Claude subscription login | Yes |
 | Anything else (API keys, local models, proxies) | n/a | No usage meters. Model and context still show |
 
-Usage reflects your whole account, including activity outside the current conversation. If you sign in after starting Pi, usage appears within a few minutes, or right away with `/statusline refresh`.
+Usage reflects your whole account, including activity outside the current conversation. If you sign in after starting Pi, usage appears within a few minutes, or right away with `/statusbar refresh`.
 
 ## Commands
 
 ```text
-/statusline                 Show current status and usage details
-/statusline on | off        Turn this footer on, or go back to Pi's default
-/statusline refresh         Refresh subscription usage now
-/statusline icons nerd      Provider logos + Nerd Font icons (default)
-/statusline icons unicode   Portable Unicode icons
-/statusline icons ascii     Plain text labels
+/statusbar                 Show current status and usage details
+/statusbar on | off        Turn this footer on, or go back to Pi's default
+/statusbar refresh         Refresh subscription usage now
+/statusbar icons nerd      Provider logos + Nerd Font icons (default)
+/statusbar icons unicode   Portable Unicode icons
+/statusbar icons ascii     Plain text labels
 ```
 
 Your choices are remembered between sessions.

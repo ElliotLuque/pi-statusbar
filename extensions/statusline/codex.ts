@@ -10,11 +10,12 @@ export const CODEX_POLL_MS = 5 * 60_000;
 export type Spawner = typeof spawn;
 export type ExecutableFinder = (name: string) => string | undefined;
 
-const version = (() => {
+const clientInfo = (() => {
   try {
-    return String(JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")).version);
+    const manifest = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
+    return { name: String(manifest.name), version: String(manifest.version) };
   } catch {
-    return "unknown";
+    return { name: "pi-statusbar", version: "unknown" };
   }
 })();
 
@@ -138,6 +139,6 @@ export function fetchCodexAppServerQuota(
         }
       }
     });
-    send({ id: 1, method: "initialize", params: { clientInfo: { name: "pi-terminal-statusline", version } } });
+    send({ id: 1, method: "initialize", params: { clientInfo } });
   });
 }

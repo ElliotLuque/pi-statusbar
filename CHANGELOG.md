@@ -2,6 +2,8 @@
 
 ## 0.1.1 - 14 oct 2026
 
+- Renamed from `pi-terminal-statusline` to `pi-statusbar`. Install with `pi install npm:pi-statusbar`.
+- `/statusbar` is the command now; `/statusline` keeps working. Your saved settings carry over.
 - Preview image in the Pi package gallery.
 
 ## 0.1.0 - 14 oct 2026

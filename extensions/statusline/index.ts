@@ -6,7 +6,7 @@ import { defaultPreferences, isIconMode, readPreferences, savePreferences } from
 import { fetchQuota, quotaKey } from "./quota.ts";
 import { renderFooter } from "./render.ts";
 
-export default function terminalStatusline(pi: ExtensionAPI): void {
+export default function statusbar(pi: ExtensionAPI): void {
   let preferences = { ...defaultPreferences };
   let context: ExtensionContext | undefined;
   let poller: QuotaPoller | undefined;
@@ -15,7 +15,9 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
   let disposeFooter: (() => void) | undefined;
   let generation = 0;
   let providerKey = "";
-  const preferencePath = join(getAgentDir(), "terminal-statusline.json");
+  const preferencePath = join(getAgentDir(), "statusbar.json");
+  // Settings saved by 0.1.0, published as pi-terminal-statusline.
+  const legacyPreferencePaths = [join(getAgentDir(), "terminal-statusline.json")];
 
   function replacePoller(ctx: ExtensionContext): void {
     poller?.stop();
@@ -84,7 +86,7 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
     poller?.stop();
     context = ctx;
     if (ctx.mode !== "tui") return;
-    preferences = await readPreferences(preferencePath);
+    preferences = await readPreferences(preferencePath, legacyPreferencePaths);
     if (currentGeneration !== generation) return;
     if (preferences.enabled) attach(ctx);
   });
@@ -111,11 +113,11 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
     requestRender = undefined;
   });
 
-  pi.registerCommand("statusline", {
-    description: "Statusline: on, off, refresh, icons nerd|unicode|ascii, or quota details",
+  const statusbarCommand: Parameters<ExtensionAPI["registerCommand"]>[1] = {
+    description: "Status bar: on, off, refresh, icons nerd|unicode|ascii, or quota details",
     handler: async (args, ctx) => {
       if (ctx.mode !== "tui") {
-        if (ctx.hasUI) ctx.ui.notify("The terminal statusline is only available in interactive Pi.", "info");
+        if (ctx.hasUI) ctx.ui.notify("The status bar is only available in interactive Pi.", "info");
         return;
       }
       context = ctx;
@@ -125,13 +127,13 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
         const state = poller?.state;
         const updated = state?.updatedAt ? ` Last successful update: ${new Date(state.updatedAt).toLocaleTimeString()}.` : "";
         ctx.ui.notify(
-          `Statusline ${preferences.enabled ? "on" : "off"}; ${preferences.icons} icons. Bars show percent used. Quota: ${state?.status ?? "not running"}.${updated}${state?.reason ? ` ${state.reason}.` : ""} Commands: on, off, refresh, icons nerd|unicode|ascii.`,
+          `Status bar ${preferences.enabled ? "on" : "off"}; ${preferences.icons} icons. Bars show percent used. Quota: ${state?.status ?? "not running"}.${updated}${state?.reason ? ` ${state.reason}.` : ""} Commands: on, off, refresh, icons nerd|unicode|ascii.`,
           "info",
         );
         return;
       }
       if (command === "refresh" && parts.length === 1) {
-        if (!attached) { ctx.ui.notify("Enable the footer with /statusline on first.", "info"); return; }
+        if (!attached) { ctx.ui.notify("Enable the status bar with /statusbar on first.", "info"); return; }
         await poller?.refresh();
         const state = poller?.state;
         ctx.ui.notify(state?.reason ?? "Quota updated.", state?.status === "error" ? "warning" : "info");
@@ -145,14 +147,17 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
         preferences.icons = parts[1];
         requestRender?.();
       } else {
-        ctx.ui.notify("Use /statusline [on|off|refresh|icons nerd|unicode|ascii].", "warning");
+        ctx.ui.notify("Use /statusbar [on|off|refresh|icons nerd|unicode|ascii].", "warning");
         return;
       }
       try {
         await savePreferences(preferencePath, preferences);
       } catch {
-        ctx.ui.notify("Statusline changed for this session, but preferences could not be saved.", "warning");
+        ctx.ui.notify("Status bar changed for this session, but preferences could not be saved.", "warning");
       }
     },
-  });
+  };
+  pi.registerCommand("statusbar", statusbarCommand);
+  // Kept for users of 0.1.0 (published as pi-terminal-statusline).
+  pi.registerCommand("statusline", { ...statusbarCommand, description: "Alias of /statusbar" });
 }

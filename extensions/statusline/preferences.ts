@@ -12,10 +12,26 @@ export function isIconMode(value: unknown): value is IconMode {
   return iconModes.includes(value as IconMode);
 }
 
-/** Missing or invalid files (or fields) fall back to defaults; never throws. */
-export async function readPreferences(path: string): Promise<Preferences> {
+/**
+ * Missing or invalid files (or fields) fall back to defaults; never throws.
+ * `legacyPaths` are read, in order, only when `path` does not exist yet (renamed files).
+ */
+export async function readPreferences(path: string, legacyPaths: readonly string[] = []): Promise<Preferences> {
+  for (const candidate of [path, ...legacyPaths]) {
+    let text: string;
+    try {
+      text = await readFile(candidate, "utf8");
+    } catch {
+      continue;
+    }
+    return parsePreferences(text);
+  }
+  return { ...defaultPreferences };
+}
+
+function parsePreferences(text: string): Preferences {
   try {
-    const value = JSON.parse(await readFile(path, "utf8"));
+    const value = JSON.parse(text);
     return {
       enabled: typeof value?.enabled === "boolean" ? value.enabled : defaultPreferences.enabled,
       icons: isIconMode(value?.icons) ? value.icons : defaultPreferences.icons,
