@@ -18,7 +18,7 @@ A cleaner, more useful footer for [Pi](https://pi.dev). See where you're working
 Requires Pi 1.0.0 or later.
 
 ```sh
-pi install npm:pi-statusbar
+pi install npm:@elliotluque/pi-statusbar
 ```
 
 Then run `/reload` in any open Pi session.
