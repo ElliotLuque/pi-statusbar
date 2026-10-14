@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2 - 14 oct 2026
+
+- Published from GitHub Actions with npm provenance.
+
 ## 0.1.1 - 14 oct 2026
 
 - Renamed from `pi-terminal-statusline` to `@elliotluque/pi-statusbar`. Install with `pi install npm:@elliotluque/pi-statusbar`.

@@ -1,6 +1,6 @@
 {
   "name": "@elliotluque/pi-statusbar",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Two-row Pi footer with terminal colors, model and effort icons, context, and five-hour/weekly subscription usage bars.",
   "type": "module",
   "license": "MIT",
