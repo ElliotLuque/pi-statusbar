@@ -1,4 +1,6 @@
 # Pi Statusbar
+[![npm](https://img.shields.io/npm/v/@elliotluque/pi-statusbar)](https://www.npmjs.com/package/@elliotluque/pi-statusbar)
+
 
 A cleaner, more useful footer for [Pi](https://pi.dev). See where you're working, which model you're using, and how much of your subscription you have left, at a glance.
 
