@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { fetchQuota, parseAnthropicQuota, parseOpenAIQuota, QuotaError } from "../extensions/statusline/quota.ts";
+import { fetchQuota, parseAnthropicQuota, parseOpenAIQuota } from "../extensions/statusline/quota.ts";
+import { QuotaError } from "../extensions/statusline/usage.ts";
 
 const fiveHour = { used_percent: 24, limit_window_seconds: 18_000, reset_at: 1_800_000_000 };
 const weekly = { used_percent: 51, limit_window_seconds: 604_800, reset_at: 1_800_600_000 };
@@ -48,14 +49,14 @@ test("Claude usage uses account seven_day, not a model-specific seven_day field"
 
 for (const provider of ["openai-codex"]) {
   test(`${provider}: authenticated request only to fixed usage endpoint, no redirects`, async () => {
-    const state = await fetchQuota(context(provider), new AbortController().signal, fetcher(openaiResponse, (url, options) => {
+    const state = await fetchQuota(context(provider), new AbortController().signal, { fetch: fetcher(openaiResponse, (url, options) => {
       assert.equal(url, "https://chatgpt.com/backend-api/wham/usage");
       const headers = new Headers(options.headers);
       assert.equal(headers.get("authorization"), `Bearer ${token}`);
       assert.equal(headers.get("chatgpt-account-id"), "test-account");
       assert.equal(options.redirect, "error");
       assert.equal(options.method, undefined); // GET; never an inference request.
-    }));
+    }) });
     assert.equal(state.status, "ready");
     assert.equal(state.quota?.fiveHour?.usedPercent, 24);
     assert.ok(!JSON.stringify(state).includes(token));
@@ -64,26 +65,26 @@ for (const provider of ["openai-codex"]) {
 
 test("account id header is preferred to decoded JWT and unrelated auth headers are not forwarded", async () => {
   const ctx = context("openai-codex", true, undefined, { ok: true, apiKey: "access", headers: { "ChatGPT-Account-Id": "workspace", "X-Secret": "private" } });
-  await fetchQuota(ctx, new AbortController().signal, fetcher(openaiResponse, (_url, options) => {
+  await fetchQuota(ctx, new AbortController().signal, { fetch: fetcher(openaiResponse, (_url, options) => {
     const headers = new Headers(options.headers);
     assert.equal(headers.get("chatgpt-account-id"), "workspace");
     assert.equal(headers.get("x-secret"), null);
-  }));
+  }) });
 });
 
 test("Claude quota uses Pi-resolved OAuth bearer token and beta header", async () => {
-  await fetchQuota(context("anthropic", true, "https://api.anthropic.com", { ok: true, apiKey: "claude-token" }), new AbortController().signal, fetcher({ five_hour: { utilization: 33 } }, (url, options) => {
+  await fetchQuota(context("anthropic", true, "https://api.anthropic.com", { ok: true, apiKey: "claude-token" }), new AbortController().signal, { fetch: fetcher({ five_hour: { utilization: 33 } }, (url, options) => {
     assert.equal(url, "https://api.anthropic.com/api/oauth/usage");
     const headers = new Headers(options.headers);
     assert.equal(headers.get("authorization"), "Bearer claude-token");
     assert.equal(headers.get("anthropic-beta"), "oauth-2025-04-20");
-  }));
+  }) });
 });
 
 test("no requests for API keys, unsupported providers, or custom proxy credentials", async () => {
   const neverFetch = (async () => { assert.fail("credentials must not be sent"); }) as typeof fetch;
   for (const ctx of [context("ollama"), context("openai", false), context("anthropic", true, "https://proxy.example"), context("openai", true, "http://chatgpt.com"), context("openai-codex", true, undefined, { ok: true, apiKey: token, baseUrl: "https://proxy.example" })]) {
-    assert.equal((await fetchQuota(ctx, new AbortController().signal, neverFetch)).status, "unavailable");
+    assert.equal((await fetchQuota(ctx, new AbortController().signal, { fetch: neverFetch })).status, "unavailable");
   }
 });
 
@@ -96,14 +97,14 @@ test("missing identity and auth failures are unavailable with no secret details"
 });
 
 test("empty successful payload is not treated as zero quota", async () => {
-  const state = await fetchQuota(context("openai-codex"), new AbortController().signal, fetcher({}));
+  const state = await fetchQuota(context("openai-codex"), new AbortController().signal, { fetch: fetcher({}) });
   assert.equal(state.status, "unavailable");
   assert.equal(state.quota, undefined);
 });
 
 test("HTTP failures are sanitized and rate limits retain Retry-After", async () => {
   for (const status of [401, 403, 429, 500]) {
-    await assert.rejects(() => fetchQuota(context("openai-codex"), new AbortController().signal, (async () => new Response("private-response", { status, headers: { "retry-after": "120" } })) as typeof fetch), (error: unknown) => {
+    await assert.rejects(() => fetchQuota(context("openai-codex"), new AbortController().signal, { fetch: (async () => new Response("private-response", { status, headers: { "retry-after": "120" } })) as typeof fetch }), (error: unknown) => {
       assert.ok(error instanceof QuotaError);
       assert.ok(!error.message.includes("private-response"));
       assert.equal(error.retryAfterMs, 120_000);
@@ -116,5 +117,5 @@ test("HTTP failures are sanitized and rate limits retain Retry-After", async () 
 test("shutdown during auth resolution prevents a network request", async () => {
   const controller = new AbortController();
   controller.abort();
-  await assert.rejects(() => fetchQuota(context("openai-codex"), controller.signal, fetcher({}, () => assert.fail("aborted"))), /abort/i);
+  await assert.rejects(() => fetchQuota(context("openai-codex"), controller.signal, { fetch: fetcher({}, () => assert.fail("aborted")) }), /abort/i);
 });

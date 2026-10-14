@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as wait } from "node:timers/promises";
-import { QuotaError, QuotaPoller } from "../extensions/statusline/quota.ts";
+import { QuotaPoller } from "../extensions/statusline/poller.ts";
+import { QuotaError } from "../extensions/statusline/usage.ts";
 import type { QuotaState } from "../extensions/statusline/types.ts";
 
 const ready: QuotaState = { status: "ready", quota: { fiveHour: { usedPercent: 37 } }, updatedAt: 1000 };
@@ -42,7 +43,7 @@ test("failed refresh retains the last successful data, labels it error, and hide
 
 test("rate limited requests cannot be hammered with manual refresh", async () => {
   let calls = 0;
-  const poller = new QuotaPoller(async () => { calls++; throw new QuotaError("rate limited", 1000); }, () => {}, { intervalMs: 100, timeoutMs: 100 });
+  const poller = new QuotaPoller(async () => { calls++; throw new QuotaError("rate limited", { retryAfterMs: 1000 }); }, () => {}, { intervalMs: 100, timeoutMs: 100 });
   poller.start();
   await flush();
   await poller.refresh();
@@ -76,11 +77,36 @@ test("stop cancels requests, suppresses late updates, and is idempotent", async 
   assert.equal(changes, 0);
 });
 
-test("unsupported providers are not polled, but an explicit refresh may retry", async () => {
+test("unavailable accounts are rechecked slowly (to pick up a later /login); refresh retries now", async () => {
   let calls = 0;
-  const poller = new QuotaPoller(async () => { calls++; return { status: "unavailable" }; }, () => {}, { intervalMs: 10, timeoutMs: 100 });
+  const poller = new QuotaPoller(async () => { calls++; return { status: "unavailable" }; }, () => {}, { intervalMs: 10, unavailableMs: 60, timeoutMs: 100 });
   poller.start();
   await wait(30);
+  assert.equal(calls, 1);
+  await poller.refresh();
+  assert.equal(calls, 2);
+  await wait(100);
+  assert.equal(calls, 3);
+  poller.stop();
+});
+
+test("a loader's pollMs hint sets the next delay and is not kept in state", async () => {
+  let calls = 0;
+  const poller = new QuotaPoller(async () => { calls++; return { ...ready, pollMs: 80 }; }, () => {}, { intervalMs: 10, timeoutMs: 100 });
+  poller.start();
+  await wait(40);
+  assert.equal(calls, 1);
+  assert.equal("pollMs" in poller.state, false);
+  await wait(80);
+  assert.equal(calls, 2);
+  poller.stop();
+});
+
+test("errors may suggest a slower poll without blocking a manual refresh", async () => {
+  let calls = 0;
+  const poller = new QuotaPoller(async () => { calls++; throw new QuotaError("codex login expired", { pollMs: 10_000 }); }, () => {}, { intervalMs: 10, timeoutMs: 100 });
+  poller.start();
+  await wait(40);
   assert.equal(calls, 1);
   await poller.refresh();
   assert.equal(calls, 2);

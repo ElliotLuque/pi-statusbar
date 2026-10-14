@@ -87,7 +87,8 @@ test("interactive footer starts automatically; effort, provider, statuses and co
     assert.equal(h.subscriptions, 1);
     let lines = h.component!.render(140).map(stripTerminalSequences);
     assert.match(lines[0], /repo.*local-model.*high/);
-    assert.match(lines[1], /main · ctx 10% · review ready +5h --/);
+    // A local model has no subscription usage, so no meters are shown.
+    assert.match(lines[1], /main · ctx 10% · review ready$/);
     h.setEffort("low");
     await h.event("thinking_level_select");
     lines = h.component!.render(100).map(stripTerminalSequences);

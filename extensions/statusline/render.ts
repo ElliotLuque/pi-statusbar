@@ -1,4 +1,4 @@
-import { basename, sep } from "node:path";
+import { sep } from "node:path";
 import { sliceByColumn, stripTerminalSequences, truncateToWidth, visibleWidth } from "@earendil-works/pi-tui";
 import type { FooterState, IconMode, UsageWindow } from "./types.ts";
 
@@ -41,8 +41,15 @@ export function safeText(text: string): string {
 }
 
 export function shortenDirectory(cwd: string, home: string): string {
+  if (!home) return cwd;
   if (cwd === home) return "~";
-  return cwd.startsWith(home + sep) ? "~" + cwd.slice(home.length) : cwd;
+  const next = cwd[home.length];
+  return cwd.startsWith(home) && (next === "/" || next === sep) ? "~" + cwd.slice(home.length) : cwd;
+}
+
+/** Last path segment, accepting either separator. "~" stays "~". */
+function lastSegment(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 }
 
 function tail(text: string, width: number, ellipsis: string): string {
@@ -95,7 +102,8 @@ export function renderFooter(state: FooterState, width: number): string[] {
   const directoryBudget = Math.max(0, width - visibleWidth(identity) - 2);
   let directory = safeText(shortenDirectory(state.cwd, state.home));
   const prefix = glyph.directory + " ";
-  if (visibleWidth(prefix + directory) > directoryBudget) directory = basename(state.cwd) || state.cwd;
+  // Every displayed form goes through safeText: directory names can carry terminal escapes.
+  if (visibleWidth(prefix + directory) > directoryBudget) directory = safeText(lastSegment(directory)) || directory;
   const location = directoryBudget > visibleWidth(prefix) + 1
     ? paint("directory", prefix + tail(directory, directoryBudget - visibleWidth(prefix), ellipsis))
     : paint("directory", clipped(directory, directoryBudget));
@@ -132,6 +140,8 @@ export function renderFooter(state: FooterState, width: number): string[] {
   const context = `${muted("ctx")} ${contextPercent === undefined ? muted("--") : paint("text", `${Math.round(contextPercent)}%`)}`;
   const statuses = state.statuses.map(safeText).filter(Boolean).join(ascii ? " | " : " · ");
   const left = [branch, context, statuses ? muted(statuses) : ""].filter(Boolean).join(divider);
+  // Accounts without subscription usage (API keys, local models) get no meters at all.
+  if (state.quota.status === "unavailable" && !quota) return [row(location, identity), row(left, "")];
   const variants = [capacity(10, false), capacity(8, false), capacity(5, true), capacity(0, true)];
   const leftReserve = Math.min(visibleWidth(stripTerminalSequences(left)), 28) + 2;
   const usage = variants.find(value => visibleWidth(value) <= width - leftReserve)

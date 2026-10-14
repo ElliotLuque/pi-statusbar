@@ -8,7 +8,7 @@ const now = Date.now();
 const sample: FooterState = {
   cwd: "/home/elliot/projects/nixdots", home: "/home/elliot", branch: "main",
   model: { id: "gpt-5.4", provider: "openai", reasoning: true }, effort: "high",
-  context: { tokens: 76_000, contextWindow: 200_000, percent: 38 },
+  context: { percent: 38 },
   quota: { status: "ready", quota: {
     fiveHour: { usedPercent: 24, resetsAt: now + 130 * 60_000 },
     weekly: { usedPercent: 51, resetsAt: now + 51 * 60 * 60_000 },
@@ -23,7 +23,7 @@ const variants: [string, FooterState, number][] = [
   ["claude", { ...sample, model: { id: "claude-sonnet-4-6", provider: "anthropic", reasoning: true } }, 100],
   ["unicode-icons", { ...sample, icons: "unicode" }, 100],
   ["ascii-icons", { ...sample, icons: "ascii" }, 80],
-  ["unknown", { ...sample, context: { tokens: null, contextWindow: 200_000, percent: null }, quota: { status: "unavailable" } }, 80],
+  ["unknown", { ...sample, context: { percent: null }, quota: { status: "unavailable" } }, 80],
   ["stale", { ...sample, quota: { ...sample.quota, status: "error" } }, 120],
   ["high-usage", { ...sample, quota: { status: "ready", quota: { fiveHour: { usedPercent: 79 }, weekly: { usedPercent: 96 } } }, statuses: ["review ready"] }, 100],
 ];

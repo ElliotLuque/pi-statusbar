@@ -1,3 +1,8 @@
 node_modules/
 *.tgz
-.impeccable/review/
+
+# Internal design/review process files; kept local, never published.
+.impeccable/
+docs/
+PRODUCT.md
+DESIGN.md

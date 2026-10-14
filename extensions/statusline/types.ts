@@ -15,6 +15,8 @@ export interface QuotaState {
   quota?: Quota;
   updatedAt?: number;
   reason?: string;
+  /** Loader hint: delay before the next automatic poll. Not kept in the poller's state. */
+  pollMs?: number;
 }
 
 export interface FooterState {
@@ -25,7 +27,8 @@ export interface FooterState {
   effort: string;
   /** Pi's editor border color for the current thinking level (theme.getThinkingBorderColor). */
   effortColor?: (text: string) => string;
-  context?: { tokens: number | null; contextWindow: number; percent: number | null };
+  /** Share of the model's context window in use; null when unknown (e.g. after compaction). */
+  context?: { percent: number | null };
   quota: QuotaState;
   statuses: readonly string[];
   icons: IconMode;

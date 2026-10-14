@@ -41,9 +41,9 @@ Bars turn yellow at 75% used and red at 90%. `--` means a value isn't available 
 | --- | --- | --- |
 | OpenAI | Sign in with ChatGPT | Yes (needs the Codex CLI signed in with `codex login`) |
 | Anthropic | Claude subscription login | Yes |
-| Anything else (API keys, local models, proxies) | n/a | Not available. Model and context still show |
+| Anything else (API keys, local models, proxies) | n/a | No usage meters. Model and context still show |
 
-Usage reflects your whole account, including activity outside the current conversation.
+Usage reflects your whole account, including activity outside the current conversation. If you sign in after starting Pi, usage appears within a few minutes, or right away with `/statusline refresh`.
 
 ## Commands
 

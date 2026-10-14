@@ -5,9 +5,9 @@ import { setTimeout as wait } from "node:timers/promises";
 
 const publishing = process.argv.includes("--publish");
 const registry = "https://registry.npmjs.org/";
-const npm = process.platform === "win32" ? "npm.cmd" : "npm";
+// Windows ships npm as a batch shim, which Node only runs through a shell. All arguments are fixed.
 function run(args, capture = false) {
-  return execFileSync(npm, args, { encoding: "utf8", stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit" });
+  return execFileSync("npm", args, { encoding: "utf8", stdio: capture ? ["ignore", "pipe", "pipe"] : "inherit", shell: process.platform === "win32" });
 }
 
 const manifest = JSON.parse(await readFile("package.json", "utf8"));
@@ -31,7 +31,8 @@ run(["run", "check"]);
 run(["test"]);
 const [pack] = JSON.parse(run(["pack", "--dry-run", "--json", "--ignore-scripts"], true));
 const files = pack.files.map(file => file.path);
-for (const file of ["package.json", "README.md", "LICENSE", "CHANGELOG.md", "extensions/statusline/index.ts", "extensions/statusline/render.ts", "extensions/statusline/quota.ts", "extensions/statusline/types.ts"]) {
+const modules = ["index", "render", "quota", "codex", "poller", "preferences", "usage", "types"].map(name => `extensions/statusline/${name}.ts`);
+for (const file of ["package.json", "README.md", "LICENSE", "CHANGELOG.md", ...modules]) {
   assert.ok(files.includes(file), `Missing package file: ${file}`);
 }
 assert.ok(files.every(file => ["package.json", "README.md", "LICENSE", "CHANGELOG.md"].includes(file) || /^extensions\/statusline\/[^/]+\.ts$/.test(file)), "Unexpected files in release tarball");

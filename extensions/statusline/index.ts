@@ -1,44 +1,13 @@
-import { randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { getAgentDir, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { fetchQuota, QuotaPoller } from "./quota.ts";
+import { QuotaPoller } from "./poller.ts";
+import { defaultPreferences, isIconMode, readPreferences, savePreferences } from "./preferences.ts";
+import { fetchQuota, quotaKey } from "./quota.ts";
 import { renderFooter } from "./render.ts";
-import type { IconMode } from "./types.ts";
-
-interface Preferences { enabled: boolean; icons: IconMode }
-const defaults: Preferences = { enabled: true, icons: "nerd" };
-const iconModes = ["nerd", "unicode", "ascii"] as const;
-function isIconMode(value: unknown): value is IconMode {
-  return iconModes.includes(value as IconMode);
-}
-
-async function readPreferences(path: string): Promise<Preferences> {
-  try {
-    const value = JSON.parse(await readFile(path, "utf8"));
-    return {
-      enabled: typeof value?.enabled === "boolean" ? value.enabled : defaults.enabled,
-      icons: isIconMode(value?.icons) ? value.icons : defaults.icons,
-    };
-  } catch {
-    return { ...defaults };
-  }
-}
-
-async function savePreferences(path: string, preferences: Preferences): Promise<void> {
-  await mkdir(getAgentDir(), { recursive: true });
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  try {
-    await writeFile(temporary, JSON.stringify(preferences, null, 2) + "\n", { mode: 0o600 });
-    await rename(temporary, path);
-  } finally {
-    await unlink(temporary).catch(() => {});
-  }
-}
 
 export default function terminalStatusline(pi: ExtensionAPI): void {
-  let preferences = { ...defaults };
+  let preferences = { ...defaultPreferences };
   let context: ExtensionContext | undefined;
   let poller: QuotaPoller | undefined;
   let requestRender: (() => void) | undefined;
@@ -50,7 +19,7 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
 
   function replacePoller(ctx: ExtensionContext): void {
     poller?.stop();
-    providerKey = `${ctx.model?.provider ?? ""}:${ctx.model?.baseUrl ?? ""}`;
+    providerKey = quotaKey(ctx.model);
     poller = new QuotaPoller(
       signal => process.env.PI_OFFLINE === "1"
         ? Promise.resolve({ status: "unavailable", reason: "Quota polling disabled in offline mode" })
@@ -123,8 +92,7 @@ export default function terminalStatusline(pi: ExtensionAPI): void {
   pi.on("model_select", (_event, ctx) => {
     context = ctx;
     if (!attached) return;
-    const nextKey = `${ctx.model?.provider ?? ""}:${ctx.model?.baseUrl ?? ""}`;
-    if (nextKey !== providerKey) replacePoller(ctx);
+    if (quotaKey(ctx.model) !== providerKey) replacePoller(ctx);
     requestRender?.();
   });
   pi.on("thinking_level_select", (_event, ctx) => {
