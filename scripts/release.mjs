@@ -90,15 +90,18 @@ try {
   process.exit(1);
 }
 let published;
-for (let attempt = 0; attempt < 6; attempt++) {
+// The registry can take a few minutes to serve a new version; read past its cache.
+const url = `${registry}${manifest.name.replace("/", "%2f")}/${manifest.version}`;
+for (let attempt = 0; attempt < 30 && !published; attempt++) {
+  if (attempt) await wait(10_000);
   try {
-    published = JSON.parse(run(["view", `${manifest.name}@${manifest.version}`, "--json", "--registry", registry], true));
-    break;
+    const response = await fetch(`${url}?t=${Date.now()}`, { headers: { "Cache-Control": "no-cache" } });
+    if (response.ok) published = await response.json();
   } catch {
-    if (attempt < 5) await wait(5000);
+    // Network hiccup; retry.
   }
 }
-assert.ok(published, "pnpm publish ran, but registry verification failed. Check npmjs.com before retrying; a version cannot be republished.");
+assert.ok(published, "Published, but the registry did not show this version within 5 minutes. Check npmjs.com; do not republish.");
 assert.equal(published.version, manifest.version);
 assert.ok(published.keywords?.includes("pi-package"));
 assert.equal(published.pi?.extensions?.[0], "./extensions/statusline/index.ts");
