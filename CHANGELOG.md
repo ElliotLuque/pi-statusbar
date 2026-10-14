@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.0 — unreleased
+## 0.1.0 - 14 oct 2026
 
 - Two-row footer: working directory and Git branch on the left; provider logo, model and reasoning effort on the right.
 - Context usage shown as a percentage of the model's context window.
