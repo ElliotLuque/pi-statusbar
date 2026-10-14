@@ -96,7 +96,7 @@ test("interactive footer starts automatically; effort, provider, statuses and co
     h.ctx.model = { ...h.ctx.model!, id: "gpt-test", provider: "openai" };
     await h.event("model_select");
     await flush();
-    assert.match(stripTerminalSequences(h.component!.render(100)[0]), /\ue1af gpt-test/);
+    assert.match(stripTerminalSequences(h.component!.render(100)[0]), /\uec81 gpt-test/);
     assert.ok(h.renders > 0);
     await h.event("session_shutdown");
     assert.equal(h.subscriptions, 0);

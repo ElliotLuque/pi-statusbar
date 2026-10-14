@@ -6,35 +6,38 @@ import type { FooterState, IconMode, UsageWindow } from "./types.ts";
 const palette = { text: 39, muted: 37, track: 90, directory: 34, branch: 36, model: 35, effort: 36, good: 32, warning: 33, error: 31 };
 type Role = keyof typeof palette;
 
-// Provider marks from the "Herdr Agent Icons" font (Private Use Area, mapped by the terminal);
-// generic symbols come from Nerd Fonts 3.x.
-const logos: Record<string, string> = {
-  claude: "\ue1a0", gemini: "\ue1ae", gpt: "\ue1af", deepseek: "\ue1ad", qwen: "\ue1b0", grok: "\ue1b1",
-  kimi: "\ue1a6", meta: "\ue1b9", glm: "\ue1b7", copilot: "\ue1ac", cursor: "\ue1ab",
+// Provider marks that ship in Nerd Fonts itself (OpenAI and Claude need Nerd Fonts 3.5+).
+// Providers without a Nerd Font mark use the generic model icon.
+const logos = {
+  openai: "\uec81", // cod-openai
+  claude: "\uec82", // cod-claude
+  google: "\u{f02ad}", // md-google
+  copilot: "\uf4b8", // oct-copilot
 };
+const byProvider: [RegExp, keyof typeof logos][] = [
+  [/^(openai|openai-codex|azure-openai)/, "openai"], [/^anthropic|claude/, "claude"],
+  [/^(google|gemini|vertex)/, "google"], [/copilot/, "copilot"],
+];
+// Routers and local runners (OpenRouter, Ollama…) are recognized by the model id instead.
+const byModel: [RegExp, keyof typeof logos][] = [
+  [/^(gpt|o\d|codex)|^openai\//, "openai"], [/claude|sonnet|opus|haiku/, "claude"], [/gemini|gemma/, "google"],
+];
+
+/** Nerd Font provider mark from the provider id, then the model id; undefined when none exists. */
+export function providerLogo(provider: string | undefined, model: string | undefined): string | undefined {
+  const p = (provider ?? "").toLowerCase();
+  const m = (model ?? "").toLowerCase();
+  for (const [pattern, name] of byProvider) if (pattern.test(p)) return logos[name];
+  for (const [pattern, name] of byModel) if (pattern.test(m)) return logos[name];
+  return undefined;
+}
+
+// Generic symbols come from Nerd Fonts 3.x.
 const icons = {
   nerd: { directory: "\uf07b", branch: "\ue0a0", model: "\u{f06a9}", effort: "\uf0e7" },
   unicode: { directory: "▱", branch: "⑂", model: "◇", effort: "ϟ" },
   ascii: { directory: "dir", branch: "git", model: "model", effort: "effort" },
 } satisfies Record<IconMode, Record<string, string>>;
-
-/** Pick a vendor mark from the provider id, then the model id (for routers and local models). */
-export function providerLogo(provider: string | undefined, model: string | undefined): string | undefined {
-  const p = (provider ?? "").toLowerCase();
-  const m = (model ?? "").toLowerCase();
-  const byProvider: [RegExp, string][] = [
-    [/^(openai|openai-codex|azure-openai)/, "gpt"], [/^anthropic|claude/, "claude"], [/^(google|gemini|vertex)/, "gemini"],
-    [/^xai|grok/, "grok"], [/deepseek/, "deepseek"], [/qwen|alibaba|dashscope/, "qwen"], [/moonshot|kimi/, "kimi"],
-    [/^(zai|zhipu|glm)/, "glm"], [/copilot/, "copilot"], [/cursor/, "cursor"],
-  ];
-  const byModel: [RegExp, string][] = [
-    [/^(gpt|o\d|codex)/, "gpt"], [/claude|sonnet|opus|haiku/, "claude"], [/gemini|gemma/, "gemini"], [/grok/, "grok"],
-    [/deepseek/, "deepseek"], [/qwen|qwq/, "qwen"], [/kimi/, "kimi"], [/llama/, "meta"], [/glm/, "glm"],
-  ];
-  for (const [pattern, name] of byProvider) if (pattern.test(p)) return logos[name];
-  for (const [pattern, name] of byModel) if (pattern.test(m)) return logos[name];
-  return undefined;
-}
 
 export function safeText(text: string): string {
   return stripTerminalSequences(text).replace(/[\x00-\x1f\x7f-\x9f\u202a-\u202e\u2066-\u2069]/g, " ").replace(/\s+/g, " ").trim();
@@ -91,9 +94,9 @@ export function renderFooter(state: FooterState, width: number): string[] {
 
   // Row one, right: provider mark, model and effort. Cap it so the directory keeps room.
   const model = state.model;
-  const logo = state.icons === "nerd" ? providerLogo(model?.provider, model?.id) ?? glyph.model : glyph.model;
   const effortText = mark(glyph.effort, model?.reasoning ? safeText(state.effort) : "n/a");
   const effortPart = state.color && state.effortColor ? state.effortColor(effortText) : paint("effort", effortText);
+  const logo = state.icons === "nerd" ? providerLogo(model?.provider, model?.id) ?? glyph.model : glyph.model;
   const modelBudget = Math.max(1, Math.floor(width * 0.6) - visibleWidth(effortPart) - visibleWidth(divider));
   const modelPart = paint("model", clipped(mark(logo, safeText(model?.id ?? "no model")), modelBudget));
   const identity = clipped(modelPart + divider + effortPart, Math.max(1, width - Math.min(10, Math.floor(width * 0.3))));

@@ -7,7 +7,7 @@ A cleaner, more useful footer for [Pi](https://pi.dev). See where you're working
 ## What you get
 
 - **Where you are**: your working directory and current Git branch, worktrees included.
-- **What you're running**: the active model with its provider logo (OpenAI, Claude, Gemini, Grok, DeepSeek, Qwen, Kimi, Meta, GLM…) and the current reasoning effort.
+- **What you're running**: the active model with its provider logo (OpenAI, Claude, Google, Copilot) and the current reasoning effort.
 - **How full the conversation is**: context usage as a percentage of the model's window.
 - **How much subscription you have left**: five-hour and weekly usage bars for ChatGPT/Codex and Claude plans, with time until reset.
 - **Your colors**: it uses your terminal's palette, so it fits Catppuccin, Solarized, light or dark themes with no extra setup.
@@ -60,7 +60,7 @@ Your choices are remembered between sessions.
 
 ## Icons and fonts
 
-The default style needs a [Nerd Font](https://www.nerdfonts.com/) and the [Herdr Agent Icons](https://github.com/hhdebb/herdr-radar) font for provider logos. If icons show up as boxes, switch to `unicode` or `ascii` mode.
+The default style needs a [Nerd Font](https://www.nerdfonts.com/) (version 3.5 or later for the OpenAI and Claude logos). If icons show up as boxes, switch to `unicode` or `ascii` mode.
 
 ## Compatibility notes
 

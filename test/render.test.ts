@@ -26,7 +26,7 @@ for (const icons of ["nerd", "unicode", "ascii"] as const) {
 
 test("layout: directory over branch and context; model/effort over usage on the right", () => {
   const [top, bottom] = renderFooter(example, 120);
-  assert.match(top, /^\uf07b ~\/projects\/nixdots +\ue1af gpt-5\.4 · \uf0e7 high$/);
+  assert.match(top, /^\uf07b ~\/projects\/nixdots +\uec81 gpt-5\.4 · \uf0e7 high$/u);
   assert.match(bottom, /^\ue0a0 main · ctx 38% +2h 10m [█░]{10} 24% · 2d 3h [█░]{10} 51%$/);
   assert.equal(visibleWidth(top), 120);
   assert.equal(visibleWidth(bottom), 120);
@@ -54,14 +54,18 @@ test("usage bars are thick blocks; tracks differ from fill only by color, or ░
   assert.match(colored, /\x1b\[32m██\x1b\[39m\x1b\[90m█{8}\x1b\[39m/);
 });
 
-test("provider marks: OpenAI, Claude, Gemini and model-based fallbacks; robot otherwise", () => {
-  assert.equal(providerLogo("openai", "gpt-6.1-sol"), "\ue1af");
-  assert.equal(providerLogo("openai-codex", "x"), "\ue1af");
-  assert.equal(providerLogo("anthropic", "claude-sonnet-4-6"), "\ue1a0");
-  assert.equal(providerLogo("google", "gemini-3"), "\ue1ae");
-  assert.equal(providerLogo("ollama", "qwen3:32b"), "\ue1b0");
-  assert.equal(providerLogo("openrouter", "anthropic/claude-opus"), "\ue1a0");
-  assert.equal(providerLogo("ollama", "mystery"), undefined);
+test("provider marks come from Nerd Fonts; robot for providers without one", () => {
+  assert.equal(providerLogo("openai", "gpt-6.1-sol"), "\uec81");
+  assert.equal(providerLogo("openai-codex", "x"), "\uec81");
+  assert.equal(providerLogo("anthropic", "claude-sonnet-4-6"), "\uec82");
+  assert.equal(providerLogo("google", "gemini-3"), "\u{f02ad}");
+  assert.equal(providerLogo("github-copilot", "gpt-5"), "\uf4b8");
+  assert.equal(providerLogo("openrouter", "anthropic/claude-opus"), "\uec82");
+  assert.equal(providerLogo("openrouter", "openai/gpt-oss-120b"), "\uec81");
+  assert.equal(providerLogo("ollama", "gemma3:27b"), "\u{f02ad}");
+  for (const [provider, model] of [["ollama", "qwen3:32b"], ["xai", "grok-4"], ["deepseek", "deepseek-r1"], ["ollama", "mystery"]]) {
+    assert.equal(providerLogo(provider, model), undefined);
+  }
   assert.match(renderFooter({ ...example, model: { id: "mystery", provider: "ollama", reasoning: false } }, 100)[0], /\u{f06a9} mystery · \uf0e7 n\/a$/u);
   assert.match(renderFooter({ ...example, icons: "unicode" }, 100)[0], /◇ gpt-5\.4/);
 });
