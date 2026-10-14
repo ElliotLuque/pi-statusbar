@@ -20,6 +20,13 @@ function run(args, capture = false) {
 }
 
 const manifest = JSON.parse(await readFile("package.json", "utf8"));
+function isPublished() {
+  try {
+    return run(["view", `${manifest.name}@${manifest.version}`, "version", "--registry", registry], true).trim() === manifest.version;
+  } catch {
+    return false; // 404: not published yet.
+  }
+}
 assert.ok(manifest.keywords.includes("pi-package"), "Gallery discovery requires the pi-package keyword");
 assert.deepEqual(manifest.pi.extensions, ["./extensions/statusline/index.ts"]);
 assert.ok(!manifest.private, "Package must be public");
@@ -35,6 +42,11 @@ if (publishing) {
   }
   const tag = process.env.GITHUB_REF_NAME;
   assert.equal(tag, `v${manifest.version}`, `Tag ${tag} does not match package.json version ${manifest.version}`);
+  // Versions staged and approved by hand are already live; re-running for their tag is not an error.
+  if (isPublished()) {
+    console.log(`${manifest.name}@${manifest.version} is already on npm; nothing to publish.`);
+    process.exit(0);
+  }
 } else if (staging) {
   try {
     console.log(`Staging as ${run(["whoami", "--registry", registry], true).trim()}`);
@@ -67,7 +79,16 @@ if (staging) {
 
 // Uses the GitHub Actions OIDC token; no npm token is stored anywhere.
 // Tag checkouts are a detached HEAD, so skip pnpm's branch check; the tag/version check above replaces it.
-run(["publish", "--access", "public", "--registry", registry, "--provenance", "--no-git-checks"]);
+try {
+  run(["publish", "--access", "public", "--registry", registry, "--provenance", "--no-git-checks"]);
+} catch {
+  console.error([
+    "Publish failed. If the log above shows \"Skipped OIDC ... 404\", npm has no matching trusted publisher.",
+    `On npmjs.com: ${manifest.name} > Settings > Trusted Publisher > GitHub Actions with`,
+    "user ElliotLuque, repository pi-statusbar, workflow release.yml, no environment, and \"npm publish\" allowed.",
+  ].join("\n"));
+  process.exit(1);
+}
 let published;
 for (let attempt = 0; attempt < 6; attempt++) {
   try {
