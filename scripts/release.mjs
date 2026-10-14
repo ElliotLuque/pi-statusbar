@@ -23,6 +23,7 @@ const manifest = JSON.parse(await readFile("package.json", "utf8"));
 assert.ok(manifest.keywords.includes("pi-package"), "Gallery discovery requires the pi-package keyword");
 assert.deepEqual(manifest.pi.extensions, ["./extensions/statusline/index.ts"]);
 assert.ok(!manifest.private, "Package must be public");
+assert.match(await readFile("CHANGELOG.md", "utf8"), new RegExp(`^## ${manifest.version.replaceAll(".", "\\.")} `, "m"), `CHANGELOG.md has no entry for ${manifest.version}`);
 for (const name of ["@earendil-works/pi-coding-agent", "@earendil-works/pi-tui"]) {
   assert.equal(manifest.peerDependencies[name], "*", `${name} must be a host-provided peer`);
   assert.ok(!manifest.dependencies?.[name], `Do not bundle ${name}`);

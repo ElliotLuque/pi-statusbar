@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.1 - 14 oct 2026
+
+- Preview image in the Pi package gallery.
+
 ## 0.1.0 - 14 oct 2026
 
 - Two-row footer: working directory and Git branch on the left; provider logo, model and reasoning effort on the right.
